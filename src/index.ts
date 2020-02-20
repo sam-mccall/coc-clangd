@@ -4,11 +4,10 @@ import { Ctx } from './ctx';
 import { FileStatus } from './file_status';
 
 export async function activate(context: ExtensionContext): Promise<void> {
-  const ctx = new Ctx(context);
-  if (!ctx.config.enabled) {
+  if (!workspace.getConfiguration().get<boolean>('clangd.enabled')) {
     return;
   }
-
+  const ctx = new Ctx(context);
   const bin = ctx.resolveBin();
   if (!bin) {
     workspace.showMessage(`clangd is not found`, 'error');

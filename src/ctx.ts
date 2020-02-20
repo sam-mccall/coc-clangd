@@ -1,8 +1,18 @@
-import { Executable, ExtensionContext, HandleDiagnosticsSignature, LanguageClient, LanguageClientOptions, ServerOptions, services, StaticFeature, workspace } from 'coc.nvim';
+import {
+  Executable,
+  ExtensionContext,
+  HandleDiagnosticsSignature,
+  LanguageClient,
+  LanguageClientOptions,
+  ServerOptions,
+  services,
+  StaticFeature,
+  workspace,
+  WorkspaceConfiguration
+} from 'coc.nvim';
 import { existsSync } from 'fs';
 import { Diagnostic, TextDocumentClientCapabilities } from 'vscode-languageserver-protocol';
 import which from 'which';
-import { Config } from './config';
 
 class ClangdExtensionFeature implements StaticFeature {
   initialize() {}
@@ -18,15 +28,15 @@ class ClangdExtensionFeature implements StaticFeature {
 }
 
 export class Ctx {
-  public readonly config: Config;
+  public readonly config: WorkspaceConfiguration;
   client: LanguageClient | null = null;
 
   constructor(private readonly context: ExtensionContext) {
-    this.config = new Config();
+    this.config = workspace.getConfiguration('clangd');
   }
 
   resolveBin(): string | undefined {
-    const bin = which.sync(this.config.path, { nothrow: true });
+    const bin = which.sync(this.config.get<string>('path')!, { nothrow: true });
     if (!bin) {
       return;
     }
@@ -46,21 +56,19 @@ export class Ctx {
 
     const exec: Executable = {
       command: bin,
-      args: this.config.arguments
-      // options: { env: { CLANGD_TRACE: '/tmp/clangd.log' } }
+      args: this.config.get<string[]>('arguments')
     };
 
     const serverOptions: ServerOptions = exec;
     const outputChannel = workspace.createOutputChannel('clangd trace');
 
-    const cudaFilePattern = '**/*.{cu}';
     const clientOptions: LanguageClientOptions = {
       documentSelector: [
         { scheme: 'file', language: 'c' },
         { scheme: 'file', language: 'cpp' },
         { scheme: 'file', language: 'objective-c' },
         { scheme: 'file', language: 'objective-cpp' },
-        { scheme: 'file', pattern: cudaFilePattern }
+        { scheme: 'file', pattern: '**/*.{cu}' }
       ],
       initializationOptions: { clangdFileStatus: true },
       outputChannel,
